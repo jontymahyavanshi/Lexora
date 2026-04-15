@@ -19,3 +19,18 @@ export const cleanJSON = (text: string) => {
     };
   }
 };
+export const sanitizeQuestions = (questions: any[]) => {
+  return questions.map((q) => {
+    let question = q.question;
+
+    // ❌ remove unwanted phrases
+    question = question.replace(/Choose the correct.*?:/gi, "");
+    question = question.replace(/Translate.*?:/gi, "");
+    question = question.replace(/Select the correct.*?:/gi, "");
+
+    return {
+      ...q,
+      question: question.trim(),
+    };
+  });
+};

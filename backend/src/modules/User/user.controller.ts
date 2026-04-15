@@ -47,3 +47,24 @@ export const login = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Login failed" });
   }
 };
+// UPDATE LANGUAGE PREFERENCES
+export const updateLanguage = async (req: any, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { baseLanguage, targetLanguage } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { baseLanguage, targetLanguage },
+      { new: true }
+    );
+
+    res.json({
+      message: "Language updated",
+      baseLanguage: user?.baseLanguage,
+      targetLanguage: user?.targetLanguage,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update language" });
+  }
+};

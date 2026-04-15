@@ -1,16 +1,15 @@
 import mongoose, { Document } from "mongoose";
 import bcrypt from "bcryptjs";
 
-// 👤 Define User interface
+// 👤 Interface
 export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
   role: "user" | "admin";
-  xp: number;
-  level: number;
-  streak: number;
-  weakTopics: string[];
+
+  baseLanguage: string;
+  targetLanguage: string;
 
   comparePassword(password: string): Promise<boolean>;
 }
@@ -29,15 +28,15 @@ const userSchema = new mongoose.Schema<IUser>(
       default: "user",
     },
 
-    xp: { type: Number, default: 0 },
+    // 🌍 Language settings
+    baseLanguage: {
+      type: String,
+      default: "English",
+    },
 
-    level: { type: Number, default: 1 },
-
-    streak: { type: Number, default: 0 },
-
-    weakTopics: {
-      type: [String],
-      default: [],
+    targetLanguage: {
+      type: String,
+      default: "English",
     },
   },
   {
