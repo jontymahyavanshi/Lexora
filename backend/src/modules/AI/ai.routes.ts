@@ -1,13 +1,25 @@
-import { Router } from "express";
-import { createLesson, createQuiz, chat } from "./ai.controller";
+import express from "express";
+import {
+  createQuiz,
+  createLesson,
+  createPersonalizedQuiz,
+  chat,
+} from "./ai.controller";
+
 import { protect } from "../../Common/middleware/auth";
-import { createPersonalizedQuiz } from "./ai.controller";
 
-const router = Router();
+const router = express.Router();
 
-router.post("/lesson", protect, createLesson);
+// 🧪 Generate quiz
 router.post("/quiz", protect, createQuiz);
-router.post("/chat", protect, chat);
+
+// 📚 Generate lesson
+router.post("/lesson", protect, createLesson);
+
+// 🧠 Personalized quiz
 router.get("/personalized-quiz", protect, createPersonalizedQuiz);
+
+// 💬 Chat
+router.post("/chat", protect, chat);
 
 export default router;

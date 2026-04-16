@@ -72,8 +72,19 @@ export const getDashboard = async (req: any, res: Response) => {
       .lean();
 
     if (!progress) {
-      return res.status(404).json({ message: "No progress found" });
-    }
+  return res.json({
+    xp: 0,
+    level: 1,
+    streak: 0,
+    weakTopics: [],
+    stats: {
+      totalQuizzes: 0,
+      averageScore: 0,
+    },
+    recentQuizzes: [],
+    isNewUser: true,
+  });
+}
 
     // 📊 Calculate stats
     const totalQuizzes = progress.quizHistory.length;

@@ -103,7 +103,7 @@ FORMAT:
 
     const text = response.text();
 
-// console.log("RAW AI RESPONSE:\n", text);
+console.log("RAW AI RESPONSE:\n", text);
     // ✅ STEP 1: Parse JSON
     const cleaned = cleanJSON(text);
 
@@ -124,9 +124,18 @@ FORMAT:
     }
 
     return cleaned;
-  } catch (error) {
+ } catch (error: any) {
+  console.error("AI ERROR:", error?.message);
+  //console.error("GEMINI ERROR:", error);
+  // 🚨 Handle quota / rate limit
+  if (error?.message?.includes("quota")) {
     return {
-      error: "AI quiz generation failed",
+      error: "API quota exceeded. Please try again later.",
     };
   }
+
+  return {
+    error: "AI service temporarily unavailable",
+  };
+}
 };
