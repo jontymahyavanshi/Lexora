@@ -1,190 +1,145 @@
 import { Request, Response } from "express";
-import { generateLesson } from "./generators/lesson.generator";
-import { generateQuiz } from "./generators/quiz.generator";
-import { chatWithAI } from "./generators/chat.generator";
-
-import Progress from "../User/progress.model";
-import User from "../User/user.model";
 import Quiz from "./quiz.model";
+import Progress from "../User/progress.model";
 
-// 📚 LESSON
-export const createLesson = async (req: any, res: Response) => {
+//
+// 👑 ADMIN: ADD / MERGE QUESTIONS
+//
+export const createManualQuiz = async (req: any, res: Response) => {
   try {
-    const { topic, level } = req.body;
+    const {
+      topic,
+      type,
+      level,
+      baseLanguage,
+      targetLanguage,
+      questions,
+    } = req.body;
 
-    if (!topic || !level) {
-      return res.status(400).json({ message: "Missing topic or level" });
+    // ✅ Validation
+    if (
+      !topic ||
+      !type ||
+      !level ||
+      !baseLanguage ||
+      !targetLanguage ||
+      !questions
+    ) {
+      return res.status(400).json({
+        message: "Missing required fields",
+      });
     }
 
-    const user = await User.findById(req.userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    if (!Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({
+        message: "Questions must be a non-empty array",
+      });
     }
 
-    const lesson = await generateLesson(topic, level);
+    // 🔍 Find existing quiz set
+    let quiz = await Quiz.findOne({
+      topic,
+      type,
+      level,
+      baseLanguage,
+      targetLanguage,
+    });
 
-    res.json({ lesson });
+    if (quiz) {
+      // ✅ Append questions
+      quiz.questions.push(...questions);
+      await quiz.save();
+
+      return res.json({
+        message: "Questions added to existing quiz",
+        totalQuestions: quiz.questions.length,
+      });
+    }
+
+    // 🆕 Create new quiz set
+    quiz = await Quiz.create({
+      topic,
+      type,
+      level,
+      baseLanguage,
+      targetLanguage,
+      questions,
+    });
+
+    res.json({
+      message: "New quiz created",
+      quiz,
+    });
   } catch (error: any) {
-    console.error("LESSON ERROR:", error.message);
+    console.error("CREATE QUIZ ERROR:", error.message);
 
     res.status(500).json({
-      message: "Lesson generation failed",
-      error: error.message,
+      message: "Failed to create quiz",
     });
   }
 };
 
-// 🧠 PERSONALIZED QUIZ
-export const createPersonalizedQuiz = async (req: any, res: Response) => {
+//
+// 🎮 USER: FETCH QUIZ (SMART)
+//
+export const getQuizFromDB = async (req: any, res: Response) => {
   try {
+    const {
+      topic,
+      type,
+      level,
+      baseLanguage,
+      targetLanguage,
+      limit = 5,
+    } = req.body;
+
     const userId = req.userId;
 
+    const quiz = await Quiz.findOne({
+      topic,
+      type,
+      level,
+      baseLanguage,
+      targetLanguage,
+    });
+
+    if (!quiz || quiz.questions.length === 0) {
+      return res.status(404).json({
+        message: "No quiz found",
+      });
+    }
+
+    // 🧠 Get user progress
     const progress = await Progress.findOne({ userId });
 
-    if (!progress || progress.weakTopics.length === 0) {
-      return res.json({
-        message: "No weak topics yet",
-      });
-    }
+    const attempted = progress?.attemptedQuestions || [];
 
-    const randomWeak =
-      progress.weakTopics[
-        Math.floor(Math.random() * progress.weakTopics.length)
-      ];
-
-    const [type, topic] = randomWeak.split(":");
-
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const quizData = await generateQuiz(
-      topic,
-      "Beginner",
-      type as any,
-      user.baseLanguage,
-      user.targetLanguage,
-      5
+    // 🚫 Remove already attempted
+    const freshQuestions = quiz.questions.filter(
+      (q: any) => !attempted.includes(q._id.toString())
     );
 
-    if (!quizData || !quizData.questions) {
-      return res.status(500).json({
-        message: "AI returned invalid quiz",
-        debug: quizData,
-      });
-    }
+    // ⚠️ fallback if not enough
+    const source =
+      freshQuestions.length >= limit ? freshQuestions : quiz.questions;
 
-    const quiz = await Quiz.create({
-      userId,
-      topic,
-      type,
-      level: "Beginner",
-      baseLanguage: user.baseLanguage,
-      targetLanguage: user.targetLanguage,
-      questions: quizData.questions,
-    });
+    // 🎲 Shuffle
+    const shuffled = source.sort(() => 0.5 - Math.random());
+
+    const selectedQuestions = shuffled.slice(0, limit);
 
     res.json({
-      message: "Personalized quiz generated",
-      focus: randomWeak,
-      quiz,
+      message: "Quiz fetched",
+      quiz: {
+        ...quiz.toObject(),
+        questions: selectedQuestions,
+      },
     });
   } catch (error: any) {
-    console.error("PERSONALIZED QUIZ ERROR:", error.message);
+    console.error("FETCH QUIZ ERROR:", error.message);
 
     res.status(500).json({
-      message: "Personalized quiz failed",
-      error: error.message,
-    });
-  }
-};
-
-// 🧪 NORMAL QUIZ (MOST IMPORTANT)
-export const createQuiz = async (req: any, res: Response) => {
-  try {
-    const { topic, level, type, limit } = req.body;
-
-    console.log("REQ BODY:", req.body); // 🔥 debug
-
-    // ✅ Validate input
-    if (!topic || !level || !type) {
-      return res.status(400).json({
-        message: "Missing required fields (topic, level, type)",
-      });
-    }
-
-    const user = await User.findById(req.userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const safeLimit = Math.min(Math.max(Number(limit) || 5, 1), 20);
-
-    // 🤖 Generate quiz
-    const quizData = await generateQuiz(
-      topic,
-      level,
-      type,
-      user.baseLanguage,
-      user.targetLanguage,
-      safeLimit
-    );
-
-    // 🚨 AI FAIL SAFE
-   if (!quizData || quizData.error) {
-    console.error("AI FAILED RESPONSE:", quizData);
-  return res.status(500).json({
-    message: quizData?.error || "AI failed",
-  });
-}
-
-    const quiz = await Quiz.create({
-      userId: user._id,
-      topic,
-      type,
-      level,
-      baseLanguage: user.baseLanguage,
-      targetLanguage: user.targetLanguage,
-      questions: quizData.questions,
-    });
-
-    res.json({
-      message: "Quiz generated successfully",
-      totalQuestions: quiz.questions.length,
-      quiz,
-    });
-  } catch (error: any) {
-    console.error("QUIZ ERROR:", error);
-
-    res.status(500).json({
-      message: "Quiz generation failed",
-      error: error.message,
-    });
-  }
-};
-
-// 💬 CHAT
-export const chat = async (req: Request, res: Response) => {
-  try {
-    const { message } = req.body;
-
-    if (!message) {
-      return res.status(400).json({ message: "Message is required" });
-    }
-
-    const reply = await chatWithAI(message);
-
-    res.json({ reply });
-  } catch (error: any) {
-    console.error("CHAT ERROR:", error.message);
-
-    res.status(500).json({
-      message: "Chat failed",
-      error: error.message,
+      message: "Failed to fetch quiz",
     });
   }
 };

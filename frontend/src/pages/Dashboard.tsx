@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import API from "../Common/services/api";
 import Navbar from "../Common/components/Navbar";
+import { motion } from "framer-motion";
 
 export default function Dashboard() {
   const [data, setData] = useState<any>(null);
@@ -94,8 +95,14 @@ if (data?.isNewUser) {
     <div className="p-6">
     <div className="p-6 space-y-6">
       {/* 🎯 Header */}
+     <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="p-6"
+    >
       <h1 className="text-2xl font-bold">Dashboard</h1>
-
+    </motion.div>
       {/* 📊 Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-blue-100 p-4 rounded-xl">

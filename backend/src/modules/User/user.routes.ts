@@ -1,24 +1,39 @@
 import { Router } from "express";
-import { signup, login } from "./user.controller";
+import {
+  signup,
+  login,
+  updateLanguage,
+} from "./user.controller";
+
+import {
+  submitQuiz,
+  getDashboard,
+} from "./progress.controller";
+
 import { protect, authorize } from "../../Common/middleware/auth";
-import { submitQuiz } from "./progress.controller";
-import { updateLanguage } from "./user.controller";
-import { getDashboard } from "./progress.controller";
 
 const router = Router();
 
-// Auth routes
+//
+// 🔐 AUTH ROUTES
+//
 router.post("/signup", signup);
 router.post("/login", login);
 
-// User preferences
+//
+// 🌐 USER PREFERENCES
+//
 router.put("/language", protect, updateLanguage);
 
-// Progress route
+//
+// 📊 PROGRESS ROUTES
+//
 router.post("/submit-quiz", protect, submitQuiz);
 router.get("/dashboard", protect, getDashboard);
 
-// Protected route
+//
+// 👤 USER PROFILE (PROTECTED TEST)
+//
 router.get("/profile", protect, (req: any, res) => {
   res.json({
     message: "Protected route working",
@@ -27,9 +42,18 @@ router.get("/profile", protect, (req: any, res) => {
   });
 });
 
-// Admin-only route (optional test)
-router.get("/admin", protect, authorize("admin"), (req, res) => {
-  res.json({ message: "Admin only access" });
-});
+//
+// 👑 ADMIN TEST ROUTE
+//
+router.get(
+  "/admin",
+  protect,
+  authorize("admin"),
+  (req: any, res) => {
+    res.json({
+      message: "Admin only access",
+    });
+  }
+);
 
 export default router;

@@ -9,6 +9,7 @@ import Lesson from "./pages/Lesson";
 import QuizSetup from "./pages/QuizSetup"; // ✅ NEW
 // protected routes
 import ProtectedRoute from "./Common/components/ProtectedRoute";
+import AdminDashboard from "./modules/Admin/AdminDashboard"; // 👑 NEW
 
 function App() {
   return (
@@ -39,7 +40,20 @@ function App() {
           </ProtectedRoute>
         } />
 
-        <Route path="/lesson" element={<Lesson />} />
+        <Route path="/lesson" 
+        element={
+        <ProtectedRoute>
+          <Lesson />
+        </ProtectedRoute>
+        }
+        />
+        // 👑 Admin Route
+        <Route path="/admin" 
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
       </Routes>
     </BrowserRouter>
   );

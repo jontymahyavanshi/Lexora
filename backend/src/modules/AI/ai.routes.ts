@@ -1,25 +1,30 @@
 import express from "express";
 import {
-  createQuiz,
-  createLesson,
-  createPersonalizedQuiz,
-  chat,
+  createManualQuiz,
+  getQuizFromDB,
 } from "./ai.controller";
 
-import { protect } from "../../Common/middleware/auth";
+import { protect, authorize } from "../../Common/middleware/auth";
 
 const router = express.Router();
 
-// 🧪 Generate quiz
-router.post("/quiz", protect, createQuiz);
+//
+// 👑 ADMIN ROUTES
+//
 
-// 📚 Generate lesson
-router.post("/lesson", protect, createLesson);
+// ➕ Add / Merge quiz questions
+router.post(
+  "/manual-quiz",
+  protect,
+  authorize("admin"), // 🔥 only admin
+  createManualQuiz
+);
 
-// 🧠 Personalized quiz
-router.get("/personalized-quiz", protect, createPersonalizedQuiz);
+//
+// 🎮 USER ROUTES
+//
 
-// 💬 Chat
-router.post("/chat", protect, chat);
+// 📥 Fetch quiz from DB
+router.post("/get-quiz", protect, getQuizFromDB);
 
 export default router;

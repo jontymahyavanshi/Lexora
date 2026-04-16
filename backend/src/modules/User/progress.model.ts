@@ -1,29 +1,12 @@
-import mongoose, { Document, Types } from "mongoose";
+import mongoose from "mongoose";
 
-export interface IProgress extends Document {
-  userId: Types.ObjectId;
-
-  xp: number;
-  level: number;
-  streak: number;
-
-  weakTopics: string[];
-
-  quizHistory: {
-    quizId: Types.ObjectId;
-    score: number;
-    total: number;
-    date: Date;
-  }[];
-}
-
-const progressSchema = new mongoose.Schema<IProgress>(
+const progressSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true, // one progress per user
+      unique: true,
     },
 
     xp: {
@@ -46,24 +29,13 @@ const progressSchema = new mongoose.Schema<IProgress>(
       default: [],
     },
 
-    quizHistory: [
-      {
-        quizId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Quiz",
-        },
-        score: Number,
-        total: Number,
-        date: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
+    // 🔥 TRACK ATTEMPTED QUESTIONS
+    attemptedQuestions: {
+      type: [String],
+      default: [],
+    },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-export default mongoose.model<IProgress>("Progress", progressSchema);
+export default mongoose.model("Progress", progressSchema);

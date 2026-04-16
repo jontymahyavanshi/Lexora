@@ -1,32 +1,23 @@
-import mongoose, { Document, Types } from "mongoose";
+import mongoose from "mongoose";
 
-export interface IQuiz extends Document {
-  userId: Types.ObjectId;
+const questionSchema = new mongoose.Schema({
+  question: {
+    type: String,
+    required: true,
+  },
+  options: {
+    type: [String],
+    required: true,
+    validate: [(val: string[]) => val.length === 4, "Must have 4 options"],
+  },
+  answer: {
+    type: String,
+    required: true,
+  },
+});
 
-  topic: string;
-  type: string;
-  level: string;
-
-  baseLanguage: string;
-  targetLanguage: string;
-
-  questions: {
-    question: string;
-    options: string[];
-    answer: string;
-  }[];
-
-  createdAt: Date;
-}
-
-const quizSchema = new mongoose.Schema<IQuiz>(
+const quizSchema = new mongoose.Schema(
   {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
     topic: {
       type: String,
       required: true,
@@ -34,11 +25,19 @@ const quizSchema = new mongoose.Schema<IQuiz>(
 
     type: {
       type: String,
+      enum: [
+        "grammar",
+        "conversation",
+        "translation",
+        "vocabulary",
+        "fill_blank",
+      ],
       required: true,
     },
 
     level: {
       type: String,
+      enum: ["Beginner", "Intermediate", "Advanced"],
       required: true,
     },
 
@@ -52,17 +51,25 @@ const quizSchema = new mongoose.Schema<IQuiz>(
       required: true,
     },
 
-    questions: [
-      {
-        question: { type: String, required: true },
-        options: [{ type: String }],
-        answer: { type: String, required: true },
-      },
-    ],
+    // 🔥 ALL QUESTIONS IN ONE DOCUMENT
+    questions: {
+      type: [questionSchema],
+      default: [],
+    },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-export default mongoose.model<IQuiz>("Quiz", quizSchema);
+// 🔥 UNIQUE QUIZ SET
+quizSchema.index(
+  {
+    topic: 1,
+    type: 1,
+    level: 1,
+    baseLanguage: 1,
+    targetLanguage: 1,
+  },
+  { unique: true }
+);
+
+export default mongoose.model("Quiz", quizSchema);
