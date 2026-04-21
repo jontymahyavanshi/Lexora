@@ -3,7 +3,7 @@ import Quiz from "./quiz.model";
 import Progress from "../User/progress.model";
 
 //
-// 👑 ADMIN: ADD / MERGE QUESTIONS
+// 👑 ADMIN: CREATE / MERGE QUIZ
 //
 export const createManualQuiz = async (req: any, res: Response) => {
   try {
@@ -16,7 +16,7 @@ export const createManualQuiz = async (req: any, res: Response) => {
       questions,
     } = req.body;
 
-    // ✅ Validation
+    // ❌ Validation
     if (
       !topic ||
       !type ||
@@ -46,7 +46,7 @@ export const createManualQuiz = async (req: any, res: Response) => {
     });
 
     if (quiz) {
-      // ✅ Append questions
+      // ➕ Merge questions
       quiz.questions.push(...questions);
       await quiz.save();
 
@@ -80,7 +80,7 @@ export const createManualQuiz = async (req: any, res: Response) => {
 };
 
 //
-// 🎮 USER: FETCH QUIZ (SMART)
+// 🎮 USER: FETCH QUIZ FROM DB
 //
 export const getQuizFromDB = async (req: any, res: Response) => {
   try {
@@ -95,6 +95,7 @@ export const getQuizFromDB = async (req: any, res: Response) => {
 
     const userId = req.userId;
 
+    // 🔍 Find quiz set
     const quiz = await Quiz.findOne({
       topic,
       type,
@@ -109,7 +110,7 @@ export const getQuizFromDB = async (req: any, res: Response) => {
       });
     }
 
-    // 🧠 Get user progress
+    // 🧠 Get progress
     const progress = await Progress.findOne({ userId });
 
     const attempted = progress?.attemptedQuestions || [];

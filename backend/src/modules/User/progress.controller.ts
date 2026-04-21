@@ -1,18 +1,29 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import Progress from "./progress.model";
 import Quiz from "../AI/quiz.model";
 
+//
+// 🎯 SUBMIT QUIZ
+//
 export const submitQuiz = async (req: any, res: Response) => {
   try {
     const userId = req.userId;
+    const { answers, quizId } = req.body;
 
-    const { quizId, score, total } = req.body;
+    // ❌ Validation
+    if (!answers || !Array.isArray(answers)) {
+      return res.status(400).json({
+        message: "Invalid answers data",
+      });
+    }
 
-    // 🧪 Get quiz info
+    // 🧪 Get quiz
     const quiz = await Quiz.findById(quizId);
 
     if (!quiz) {
-      return res.status(404).json({ message: "Quiz not found" });
+      return res.status(404).json({
+        message: "Quiz not found",
+      });
     }
 
     // 📊 Get or create progress
@@ -22,7 +33,22 @@ export const submitQuiz = async (req: any, res: Response) => {
       progress = await Progress.create({ userId });
     }
 
-    // 📊 Save quiz history
+    // 🎯 Calculate score
+    let score = 0;
+
+    quiz.questions.forEach((q: any) => {
+      const userAnswer = answers.find(
+        (a: any) => a.questionId === q._id.toString()
+      );
+
+      if (userAnswer && userAnswer.selected === q.answer) {
+        score++;
+      }
+    });
+
+    const total = quiz.questions.length;
+
+    // 📊 Save history
     progress.quizHistory.push({
       quizId,
       score,
@@ -30,39 +56,96 @@ export const submitQuiz = async (req: any, res: Response) => {
       date: new Date(),
     });
 
-    // 🎮 XP calculation
+    // 🚫 Track attempted questions
+    const questionIds = answers.map((a: any) =>
+      a.questionId.toString()
+    );
+
+    const updatedSet = new Set([
+      ...progress.attemptedQuestions,
+      ...questionIds,
+    ]);
+
+    progress.attemptedQuestions = Array.from(updatedSet);
+
+    // 🎮 XP SYSTEM
     let xpGained = score * 10;
 
-    // 🔥 Bonus XP based on quiz type
     if (quiz.type === "conversation") xpGained += 20;
     if (quiz.type === "translation") xpGained += 15;
     if (quiz.type === "grammar") xpGained += 10;
 
     progress.xp += xpGained;
 
-    // 🧠 Level system
+    // 📈 LEVEL SYSTEM
     if (progress.xp >= progress.level * 100) {
       progress.level += 1;
     }
 
-    // ⚠️ Weak topics tracking
-    if (score < total / 2) {
-      progress.weakTopics.push(`${quiz.type}:${quiz.topic}`);
+    // 🔥 WEAK TOPIC LOGIC (FIXED)
+    const accuracy = score / total;
+    const weakKey = `${quiz.type}:${quiz.topic}`;
+
+    if (accuracy < 0.6) {
+      if (!progress.weakTopics.includes(weakKey)) {
+        progress.weakTopics.push(weakKey);
+      }
+    } else {
+      // ✅ Remove if user improved
+      progress.weakTopics = progress.weakTopics.filter(
+        (t) => t !== weakKey
+      );
     }
+
+    // 🔥 STREAK SYSTEM
+    const today = new Date();
+    const lastPlayed = progress.lastPlayed
+      ? new Date(progress.lastPlayed)
+      : null;
+
+    const todayStr = today.toDateString();
+    const lastStr = lastPlayed?.toDateString();
+
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    const yesterdayStr = yesterday.toDateString();
+
+    if (!lastPlayed) {
+      progress.streak = 1;
+    } else if (todayStr === lastStr) {
+      // same day → no change
+    } else if (lastStr === yesterdayStr) {
+      progress.streak += 1;
+    } else {
+      progress.streak = 1;
+    }
+
+    progress.lastPlayed = new Date();
 
     await progress.save();
 
     res.json({
       message: "Quiz submitted successfully",
+      score,
+      total,
       xpGained,
       totalXP: progress.xp,
       level: progress.level,
+      streak: progress.streak,
       weakTopics: progress.weakTopics,
     });
-  } catch (error) {
-    res.status(500).json({ message: "Error submitting quiz" });
+  } catch (error: any) {
+    console.error("SUBMIT ERROR:", error.message);
+
+    res.status(500).json({
+      message: "Error submitting quiz",
+    });
   }
 };
+
+//
+// 📊 DASHBOARD DATA
+//
 export const getDashboard = async (req: any, res: Response) => {
   try {
     const userId = req.userId;
@@ -71,22 +154,22 @@ export const getDashboard = async (req: any, res: Response) => {
       .populate("quizHistory.quizId")
       .lean();
 
+    // 🆕 NEW USER
     if (!progress) {
-  return res.json({
-    xp: 0,
-    level: 1,
-    streak: 0,
-    weakTopics: [],
-    stats: {
-      totalQuizzes: 0,
-      averageScore: 0,
-    },
-    recentQuizzes: [],
-    isNewUser: true,
-  });
-}
+      return res.json({
+        xp: 0,
+        level: 1,
+        streak: 0,
+        weakTopics: [],
+        stats: {
+          totalQuizzes: 0,
+          averageScore: 0,
+        },
+        recentQuizzes: [],
+        isNewUser: true,
+      });
+    }
 
-    // 📊 Calculate stats
     const totalQuizzes = progress.quizHistory.length;
 
     const avgScore =
@@ -97,7 +180,6 @@ export const getDashboard = async (req: any, res: Response) => {
             0
           ) / totalQuizzes;
 
-    // 🧪 Recent 5 quizzes
     const recentQuizzes = progress.quizHistory
       .slice(-5)
       .reverse()
@@ -123,6 +205,8 @@ export const getDashboard = async (req: any, res: Response) => {
       recentQuizzes,
     });
   } catch (error) {
-    res.status(500).json({ message: "Failed to load dashboard" });
+    res.status(500).json({
+      message: "Failed to load dashboard",
+    });
   }
 };

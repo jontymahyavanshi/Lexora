@@ -19,9 +19,15 @@ const progressSchema = new mongoose.Schema(
       default: 1,
     },
 
+    // 🔥 STREAK SYSTEM
     streak: {
       type: Number,
       default: 0,
+    },
+
+    lastPlayed: {
+      type: Date,
+      default: null,
     },
 
     weakTopics: {
@@ -29,7 +35,20 @@ const progressSchema = new mongoose.Schema(
       default: [],
     },
 
-    // 🔥 TRACK ATTEMPTED QUESTIONS
+    // 📊 QUIZ HISTORY
+    quizHistory: [
+      {
+        quizId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Quiz",
+        },
+        score: Number,
+        total: Number,
+        date: Date,
+      },
+    ],
+
+    // 🚫 NO REPEAT QUESTIONS
     attemptedQuestions: {
       type: [String],
       default: [],

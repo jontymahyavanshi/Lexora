@@ -3,10 +3,14 @@ import { useLocation, useNavigate } from "react-router-dom";
 import API from "../Common/services/api";
 import Navbar from "../Common/components/Navbar";
 import BackButton from "../Common/components/BackButton";
+import { motion } from "framer-motion";
+import Toast from "../Common/components/Toast";
+import { useToast } from "../Common/hooks/useToast";
 
 export default function Quiz() {
   const location = useLocation();
   const navigate = useNavigate();
+
   const quizConfig = location.state;
 
   const [quiz, setQuiz] = useState<any>(null);
@@ -19,7 +23,9 @@ export default function Quiz() {
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
-  // 🔥 Fetch quiz from DB
+  const { toast, showToast } = useToast();
+
+  // 🚀 Fetch Quiz
   const fetchQuiz = async () => {
     try {
       setLoading(true);
@@ -30,13 +36,18 @@ export default function Quiz() {
         return;
       }
 
-      const res = await API.post("/ai/get-quiz", quizConfig);
+      const res = await API.post("/ai/get-quiz", {
+        ...quizConfig,
+        baseLanguage: "Hindi",
+        targetLanguage: "English",
+      });
 
       setQuiz(res.data.quiz);
     } catch (err: any) {
-      const msg =
-        err.response?.data?.message || "Failed to load quiz";
-      setError(msg);
+      console.error(err);
+      setError(
+        err.response?.data?.message || "Failed to load quiz"
+      );
     } finally {
       setLoading(false);
     }
@@ -49,30 +60,24 @@ export default function Quiz() {
   // 🔄 Loading
   if (loading) {
     return (
-      <>
-        <Navbar />
-        <div className="flex justify-center items-center h-screen">
-          Loading quiz...
-        </div>
-      </>
+      <div className="flex justify-center items-center h-screen">
+        Loading quiz...
+      </div>
     );
   }
 
   // ❌ Error
   if (error) {
     return (
-      <>
-        <Navbar />
-        <div className="flex flex-col items-center justify-center h-screen space-y-4">
-          <p className="text-red-500">{error}</p>
-          <button
-            onClick={fetchQuiz}
-            className="bg-blue-600 text-white px-4 py-2 rounded"
-          >
-            Retry
-          </button>
-        </div>
-      </>
+      <div className="flex flex-col items-center justify-center h-screen">
+        <p className="text-red-500 mb-3">{error}</p>
+        <button
+          onClick={fetchQuiz}
+          className="bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          Retry
+        </button>
+      </div>
     );
   }
 
@@ -80,13 +85,13 @@ export default function Quiz() {
 
   const question = quiz.questions[current];
 
-  // 🎯 Select option
+  // 🎯 Select
   const handleSelect = (option: string) => {
     if (showResult) return;
     setSelected(option);
   };
 
-  // 🧠 Check answer
+  // 🧠 Check
   const handleCheck = () => {
     if (!selected) return;
 
@@ -95,14 +100,11 @@ export default function Quiz() {
     setShowResult(true);
   };
 
-  // ➡️ Next question
+  // ➡️ Next
   const handleNext = () => {
     const updatedAnswers = [
       ...answers,
-      {
-        questionId: question._id, // 🔥 IMPORTANT
-        selected,
-      },
+      { questionId: question._id, selected },
     ];
 
     setAnswers(updatedAnswers);
@@ -117,7 +119,7 @@ export default function Quiz() {
     }
   };
 
-  // 🚀 Submit quiz
+  // 🚀 Submit (UPDATED 🔥)
   const submitQuiz = async (finalAnswers: any[]) => {
     try {
       let score = 0;
@@ -128,22 +130,34 @@ export default function Quiz() {
         }
       });
 
-      // 🔥 Send attempted question IDs
-      await API.post("/user/submit-quiz", {
+      const res = await API.post("/user/submit-quiz", {
+        quizId: quiz._id,
         answers: finalAnswers,
       });
 
-      alert(`🎉 Score: ${score}/${quiz.questions.length}`);
+      // 🎉 TOAST (instead of alert)
+      showToast(
+        `🎉 ${score}/${quiz.questions.length} | +${res.data.xpGained} XP`,
+        "success"
+      );
 
-      navigate("/dashboard");
-    } catch {
-      alert("Error submitting quiz");
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 2000);
+    } catch (err: any) {
+      showToast(
+        err.response?.data?.message || "Failed to submit quiz",
+        "error"
+      );
     }
   };
 
   return (
     <>
       <Navbar />
+
+      {/* 🔔 Toast */}
+      {toast && <Toast message={toast.message} type={toast.type} />}
 
       <div className="p-6 max-w-xl mx-auto space-y-6">
         <BackButton />
@@ -159,14 +173,22 @@ export default function Quiz() {
         </div>
 
         {/* ❓ Question */}
-        <h2 className="text-xl font-semibold">
-          {question.question}
-        </h2>
+        <motion.div
+          key={current}
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-white p-5 rounded-xl shadow"
+        >
+          <h2 className="text-lg font-semibold">
+            {question.question}
+          </h2>
+        </motion.div>
 
         {/* 🧩 Options */}
         <div className="space-y-3">
           {question.options.map((opt: string, i: number) => {
-            let style = "bg-white";
+            let style =
+              "bg-white hover:bg-gray-100 border-gray-300";
 
             if (showResult) {
               if (opt === question.answer) {
@@ -182,7 +204,7 @@ export default function Quiz() {
               <button
                 key={i}
                 onClick={() => handleSelect(opt)}
-                className={`w-full p-3 border rounded-lg text-left ${style}`}
+                className={`w-full p-3 border rounded-lg text-left transition ${style}`}
               >
                 {opt}
               </button>
@@ -190,15 +212,15 @@ export default function Quiz() {
           })}
         </div>
 
-        {/* 🎯 Feedback */}
+        {/* 🎯 Result */}
         {showResult && (
-          <div
+          <p
             className={`text-center font-bold ${
               isCorrect ? "text-green-600" : "text-red-600"
             }`}
           >
             {isCorrect ? "Correct! 🎉" : "Wrong ❌"}
-          </div>
+          </p>
         )}
 
         {/* 🔘 Buttons */}

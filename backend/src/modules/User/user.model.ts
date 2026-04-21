@@ -16,11 +16,24 @@ export interface IUser extends Document {
 
 const userSchema = new mongoose.Schema<IUser>(
   {
-    name: { type: String, required: true },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-    email: { type: String, required: true, unique: true },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+    },
 
-    password: { type: String, required: true },
+    password: {
+      type: String,
+      required: true,
+      minlength: 6,
+    },
 
     role: {
       type: String,
@@ -31,7 +44,7 @@ const userSchema = new mongoose.Schema<IUser>(
     // 🌍 Language settings
     baseLanguage: {
       type: String,
-      default: "English",
+      default: "Hindi",
     },
 
     targetLanguage: {
@@ -44,13 +57,14 @@ const userSchema = new mongoose.Schema<IUser>(
   }
 );
 
-// 🔐 Hash password
+// 🔐 Hash password before save
 userSchema.pre("save", async function () {
   const user = this as IUser;
 
   if (!user.isModified("password")) return;
 
-  user.password = await bcrypt.hash(user.password, 10);
+  const salt = await bcrypt.genSalt(10);
+  user.password = await bcrypt.hash(user.password, salt);
 });
 
 // 🔑 Compare password

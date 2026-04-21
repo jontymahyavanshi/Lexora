@@ -1,4 +1,6 @@
-import { Router } from "express";
+import { Router, Response } from "express";
+
+// 👤 Controllers
 import {
   signup,
   login,
@@ -10,31 +12,32 @@ import {
   getDashboard,
 } from "./progress.controller";
 
+// 🔐 Middleware
 import { protect, authorize } from "../../Common/middleware/auth";
 
 const router = Router();
 
 //
-// 🔐 AUTH ROUTES
+// 🔐 AUTH
 //
 router.post("/signup", signup);
 router.post("/login", login);
 
 //
-// 🌐 USER PREFERENCES
+// 🌍 USER SETTINGS
 //
 router.put("/language", protect, updateLanguage);
 
 //
-// 📊 PROGRESS ROUTES
+// 🎮 QUIZ / PROGRESS
 //
 router.post("/submit-quiz", protect, submitQuiz);
 router.get("/dashboard", protect, getDashboard);
 
 //
-// 👤 USER PROFILE (PROTECTED TEST)
+// 👤 PROFILE (TEST)
 //
-router.get("/profile", protect, (req: any, res) => {
+router.get("/profile", protect, (req: any, res: Response) => {
   res.json({
     message: "Protected route working",
     userId: req.userId,
@@ -43,15 +46,15 @@ router.get("/profile", protect, (req: any, res) => {
 });
 
 //
-// 👑 ADMIN TEST ROUTE
+// 👑 ADMIN TEST
 //
 router.get(
   "/admin",
   protect,
   authorize("admin"),
-  (req: any, res) => {
+  (req: any, res: Response) => {
     res.json({
-      message: "Admin only access",
+      message: "Admin access granted",
     });
   }
 );

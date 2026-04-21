@@ -4,27 +4,40 @@ import {
   getQuizFromDB,
 } from "./ai.controller";
 
+import { generateLesson } from "./generators/lesson.generator"; // ✅ ADD
+
 import { protect, authorize } from "../../Common/middleware/auth";
 
 const router = express.Router();
 
 //
-// 👑 ADMIN ROUTES
+// 👑 ADMIN
 //
-
-// ➕ Add / Merge quiz questions
 router.post(
   "/manual-quiz",
   protect,
-  authorize("admin"), // 🔥 only admin
+  authorize("admin"),
   createManualQuiz
 );
 
 //
-// 🎮 USER ROUTES
+// 🎮 USER QUIZ
 //
-
-// 📥 Fetch quiz from DB
 router.post("/get-quiz", protect, getQuizFromDB);
+
+//
+// 📚 LESSON (FIXED)
+//
+router.post("/lesson", protect, async (req, res) => {
+  try {
+    const { topic, level } = req.body;
+
+    const lesson = await generateLesson(topic, level);
+
+    res.json({ lesson });
+  } catch (error) {
+    res.status(500).json({ message: "Lesson generation failed" });
+  }
+});
 
 export default router;

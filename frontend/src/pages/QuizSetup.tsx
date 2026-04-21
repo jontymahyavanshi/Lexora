@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../Common/components/Navbar";
 import BackButton from "../Common/components/BackButton";
+import { motion } from "framer-motion";
 
 export default function QuizSetup() {
   const navigate = useNavigate();
@@ -10,17 +11,27 @@ export default function QuizSetup() {
     topic: "Daily Conversation",
     type: "conversation",
     level: "Beginner",
+    baseLanguage: "Hindi",
+    targetLanguage: "English",
     limit: 5,
   });
 
-  const handleChange = (e: any) => {
-  const { name, value } = e.target;
+  const topics = [
+    "Daily Conversation",
+    "Food",
+    "Travel",
+    "Shopping",
+    "Animals",
+    "Past Tense",
+  ];
 
-  setForm({
-    ...form,
-    [name]: name === "limit" ? Number(value) : value,
-  });
-};
+  const types = [
+    "grammar",
+    "conversation",
+    "translation",
+    "vocabulary",
+    "fill_blank",
+  ];
 
   const startQuiz = () => {
     navigate("/quiz", { state: form });
@@ -28,77 +39,131 @@ export default function QuizSetup() {
 
   return (
     <>
-    <Navbar />
-    <div className="p-6">
-      <BackButton />
-    <div className="flex justify-center items-center h-screen bg-gray-100">
-      <div className="bg-white p-6 rounded-xl shadow w-96 space-y-4">
-        <h2 className="text-xl font-bold text-center">
+      <Navbar />
+
+      <div className="p-6 max-w-4xl mx-auto space-y-6">
+        <BackButton />
+
+        <h1 className="text-3xl font-bold text-center">
           Start Quiz 🎯
-        </h2>
+        </h1>
 
-        {/* Topic */}
-        <select
-          name="topic"
-          value={form.topic}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-        >
-          <option>Daily Conversation</option>
-          <option>Food</option>
-          <option>Travel</option>
-          <option>Shopping</option>
-          <option>Animals</option>
-          <option>Past Tense</option>
-        </select>
+        {/* 🎯 Topic */}
+        <div>
+          <h2 className="font-semibold mb-2">Choose Topic</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {topics.map((t) => (
+              <Card
+                key={t}
+                label={t}
+                active={form.topic === t}
+                onClick={() => setForm({ ...form, topic: t })}
+              />
+            ))}
+          </div>
+        </div>
 
-        {/* Type */}
-        <select
-          name="type"
-          value={form.type}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-        >
-          <option value="grammar">Grammar</option>
-          <option value="conversation">Conversation</option>
-          <option value="translation">Translation</option>
-          <option value="vocabulary">Vocabulary</option>
-          <option value="fill_blank">Fill Blank</option>
-        </select>
+        {/* 🧠 Type */}
+        <div>
+          <h2 className="font-semibold mb-2">Quiz Type</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {types.map((t) => (
+              <Card
+                key={t}
+                label={t}
+                active={form.type === t}
+                onClick={() => setForm({ ...form, type: t })}
+              />
+            ))}
+          </div>
+        </div>
 
-        {/* Level */}
-        <select
-          name="level"
-          value={form.level}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-        >
-          <option>Beginner</option>
-          <option>Intermediate</option>
-          <option>Advanced</option>
-        </select>
+        {/* 🎚️ Level */}
+        <div className="grid grid-cols-3 gap-3">
+          {["Beginner", "Intermediate", "Advanced"].map((lvl) => (
+            <Card
+              key={lvl}
+              label={lvl}
+              active={form.level === lvl}
+              onClick={() => setForm({ ...form, level: lvl })}
+            />
+          ))}
+        </div>
 
-        {/* Limit */}
-        <select
-          name="limit"
-          value={form.limit}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-        >
-          <option value={5}>5 Questions</option>
-          <option value={10}>10 Questions</option>
-          <option value={15}>15 Questions</option>
-        </select>
+        {/* 🌐 Languages */}
+        <div className="grid grid-cols-2 gap-3">
+          <select
+            value={form.baseLanguage}
+            onChange={(e) =>
+              setForm({ ...form, baseLanguage: e.target.value })
+            }
+            className="p-2 border rounded"
+          >
+            <option>Hindi</option>
+            <option>English</option>
+            <option>Gujarati</option>
+          </select>
 
-        <button
+          <select
+            value={form.targetLanguage}
+            onChange={(e) =>
+              setForm({ ...form, targetLanguage: e.target.value })
+            }
+            className="p-2 border rounded"
+          >
+            <option>English</option>
+            <option>Hindi</option>
+            <option>Gujarati</option>
+          </select>
+        </div>
+
+        {/* 🔢 Limit */}
+        <div className="flex gap-3 justify-center">
+          {[5, 10, 15].map((num) => (
+            <Card
+              key={num}
+              label={`${num} Q`}
+              active={form.limit === num}
+              onClick={() => setForm({ ...form, limit: num })}
+            />
+          ))}
+        </div>
+
+        {/* 🚀 Start */}
+        <motion.button
+          whileTap={{ scale: 0.95 }}
           onClick={startQuiz}
-          className="w-full bg-blue-600 text-white p-2 rounded"
+          className="w-full bg-blue-600 text-white p-3 rounded-xl text-lg hover:bg-blue-700"
         >
           Start Quiz 🚀
-        </button>
+        </motion.button>
       </div>
-    </div>
-    </div>
-  </>
+    </>
+  );
+}
+
+// 🔹 Reusable Card
+function Card({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <motion.div
+      whileTap={{ scale: 0.95 }}
+      onClick={onClick}
+      className={`p-3 text-center rounded-xl cursor-pointer border transition
+        ${
+          active
+            ? "bg-blue-600 text-white border-blue-600"
+            : "bg-white hover:bg-blue-50"
+        }`}
+    >
+      {label}
+    </motion.div>
   );
 }

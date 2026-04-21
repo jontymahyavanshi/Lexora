@@ -1,26 +1,39 @@
-import mongoose from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-const questionSchema = new mongoose.Schema({
-  question: {
-    type: String,
-    required: true,
-  },
-  options: {
-    type: [String],
-    required: true,
-    validate: [(val: string[]) => val.length === 4, "Must have 4 options"],
-  },
-  answer: {
-    type: String,
-    required: true,
-  },
-});
+// 🧩 Question Schema
+const questionSchema = new Schema(
+  {
+    question: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-const quizSchema = new mongoose.Schema(
+    options: {
+      type: [String],
+      required: true,
+      validate: [
+        (val: string[]) => val.length === 4,
+        "Each question must have exactly 4 options",
+      ],
+    },
+
+    answer: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+  },
+  { _id: true } // keep question IDs for tracking
+);
+
+// 📚 Quiz Schema (ONE DOC PER CONFIG)
+const quizSchema = new Schema(
   {
     topic: {
       type: String,
       required: true,
+      trim: true,
     },
 
     type: {
@@ -51,16 +64,18 @@ const quizSchema = new mongoose.Schema(
       required: true,
     },
 
-    // 🔥 ALL QUESTIONS IN ONE DOCUMENT
+    // 🔥 ALL QUESTIONS STORED HERE
     questions: {
       type: [questionSchema],
       default: [],
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-// 🔥 UNIQUE QUIZ SET
+// 🚨 Prevent duplicate quiz sets
 quizSchema.index(
   {
     topic: 1,

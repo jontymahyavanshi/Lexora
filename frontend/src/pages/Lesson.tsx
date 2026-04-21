@@ -2,6 +2,8 @@ import { useState } from "react";
 import API from "../Common/services/api";
 import Navbar from "../Common/components/Navbar";
 import BackButton from "../Common/components/BackButton";
+import Loader from "../Common/components/Loader";
+import Error from "../Common/components/Error";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
@@ -15,11 +17,11 @@ export default function Lesson() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // 📚 Generate Lesson
   const generateLesson = async () => {
     try {
       setLoading(true);
       setError("");
+      setLesson(null);
 
       const res = await API.post("/ai/lesson", {
         topic,
@@ -28,9 +30,9 @@ export default function Lesson() {
 
       setLesson(res.data.lesson);
     } catch (err: any) {
-      const msg =
-        err.response?.data?.message || "Failed to generate lesson";
-      setError(msg);
+      setError(
+        err.response?.data?.message || "Failed to generate lesson"
+      );
     } finally {
       setLoading(false);
     }
@@ -40,24 +42,28 @@ export default function Lesson() {
     <>
       <Navbar />
 
-      <div className="p-6 max-w-2xl mx-auto space-y-6">
+      <div className="p-6 max-w-3xl mx-auto space-y-6">
         <BackButton />
 
-        <h1 className="text-2xl font-bold">Learn 📚</h1>
+        <h1 className="text-3xl font-bold text-center">
+          Learn 📚
+        </h1>
 
-        {/* 🔽 Selection */}
-        <div className="bg-white p-4 rounded-xl shadow space-y-3">
+        {/* 🎯 Controls */}
+        <div className="bg-white p-5 rounded-2xl shadow space-y-3">
           <select
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             className="w-full p-2 border rounded"
           >
-            <option>Daily Conversation</option>
-            <option>Food</option>
-            <option>Travel</option>
-            <option>Shopping</option>
-            <option>Animals</option>
-            <option>Past Tense</option>
+            <option>Present Simple</option>
+            <option>Present Continuous</option>
+            <option>Past Simple</option>
+            <option>Past Continuous</option>
+            <option>Future Simple</option>
+            <option>Present Perfect</option>
+            <option>Past Perfect</option>
+            <option>Future Perfect</option>
           </select>
 
           <select
@@ -72,57 +78,54 @@ export default function Lesson() {
 
           <button
             onClick={generateLesson}
-            className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+            className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700"
           >
             Generate Lesson 🚀
           </button>
         </div>
 
         {/* 🔄 Loading */}
-        {loading && <p>Generating lesson...</p>}
+        {loading && <Loader text="Generating lesson..." />}
 
         {/* ❌ Error */}
-        {error && <p className="text-red-500">{error}</p>}
+        {error && <Error message={error} />}
 
-        {/* 📚 Lesson Content */}
+        {/* 📚 Lesson */}
         {lesson && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white p-5 rounded-xl shadow space-y-4"
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="bg-white p-6 rounded-2xl shadow space-y-6 leading-relaxed"
+  >
+    {/* 📚 Title */}
+    <h2 className="text-2xl font-bold text-blue-600">
+      {lesson.title}
+    </h2>
+
+    {/* 📖 Explanation */}
+    <p className="text-gray-700 whitespace-pre-line">
+      {lesson.explanation}
+    </p>
+
+    {/* ✨ Divider */}
+    <div className="border-t pt-4">
+      <h3 className="font-semibold text-lg mb-2">
+        Examples:
+      </h3>
+
+      <ul className="space-y-2">
+        {lesson.examples.map((ex: string, i: number) => (
+          <li
+            key={i}
+            className="bg-gray-100 p-3 rounded-lg"
           >
-            <h2 className="text-xl font-bold">{lesson.title}</h2>
-
-            <p className="text-gray-700">{lesson.explanation}</p>
-
-            {/* Examples */}
-            <div>
-              <h3 className="font-semibold">Examples:</h3>
-              <ul className="list-disc ml-5">
-                {lesson.examples.map((ex: string, i: number) => (
-                  <li key={i}>{ex}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* 🎯 Start Quiz Button */}
-            <button
-              onClick={() =>
-                navigate("/quiz", {
-                  state: {
-                    topic,
-                    level,
-                    type: "grammar", // default
-                    limit: 5,
-                  },
-                })
-              }
-              className="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700"
-            >
-              Practice Quiz 🎮
-            </button>
-          </motion.div>
-        )}
+            {ex}
+          </li>
+        ))}
+      </ul>
+    </div>
+  </motion.div>
+)}
       </div>
     </>
   );
